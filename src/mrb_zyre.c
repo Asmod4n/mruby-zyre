@@ -284,7 +284,7 @@ mrb_zyre_shout(mrb_state* mrb, mrb_value self)
         for (; argv < argv_end; argv++) {
             s = mrb_str_to_str(mrb, *argv);
             if (zmsg_addmem(msg, RSTRING_PTR(s), (size_t)RSTRING_LEN(s)) == -1) {
-                zmsg_destroy(&msg):
+                zmsg_destroy(&msg);
                 mrb_sys_fail(mrb, "zmsg_addmem");
             }
         }
