@@ -213,6 +213,7 @@ mrb_zyre_recv(mrb_state* mrb, mrb_value self)
             mrb_value item = mrb_str_new(mrb, zframe_data(zframe), zframe_size(zframe));
             mrb_ary_push(mrb, msgs, item);
             mrb_gc_arena_restore(mrb, ai);
+            zframe_destroy(&zframe);
             zframe = zmsg_pop(msg);
         }
         zmsg_destroy(&msg);
@@ -248,6 +249,7 @@ mrb_zyre_whisper(mrb_state* mrb, mrb_value self)
         for (; argv < argv_end; argv++) {
             s = mrb_str_to_str(mrb, *argv);
             if (zmsg_addmem(msg, RSTRING_PTR(s), (size_t)RSTRING_LEN(s)) == -1) {
+                zmsg_destroy(&msg);
                 mrb_sys_fail(mrb, "zmsg_addmem");
             }
         }
@@ -282,6 +284,7 @@ mrb_zyre_shout(mrb_state* mrb, mrb_value self)
         for (; argv < argv_end; argv++) {
             s = mrb_str_to_str(mrb, *argv);
             if (zmsg_addmem(msg, RSTRING_PTR(s), (size_t)RSTRING_LEN(s)) == -1) {
+                zmsg_destroy(&msg):
                 mrb_sys_fail(mrb, "zmsg_addmem");
             }
         }
