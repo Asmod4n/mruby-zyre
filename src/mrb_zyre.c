@@ -406,6 +406,7 @@ void mrb_mruby_zyre_gem_init(mrb_state* mrb)
     struct RClass* zyre_class;
 
     zyre_class = mrb_define_class(mrb, "Zyre", mrb->object_class);
+    MRB_SET_INSTANCE_TT(zyre_class, MRB_TT_DATA);
     mrb_define_method(mrb, zyre_class, "initialize", mrb_zyre_initialize, MRB_ARGS_OPT(1));
     mrb_define_method(mrb, zyre_class, "print", mrb_zyre_print, MRB_ARGS_NONE());
     mrb_define_method(mrb, zyre_class, "uuid", mrb_zyre_uuid, MRB_ARGS_NONE());
