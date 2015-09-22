@@ -205,6 +205,7 @@ mrb_zyre_recv(mrb_state* mrb, mrb_value self)
 {
     errno = 0;
     mrb_value result = mrb_nil_value();
+    zframe_t* zframe = NULL;
 
     zmsg_t* zmsg = zyre_recv((zyre_t*)DATA_PTR(self));
     if (zmsg) {
@@ -214,17 +215,23 @@ mrb_zyre_recv(mrb_state* mrb, mrb_value self)
         MRB_TRY(&c_jmp)
         {
             mrb->jmp = &c_jmp;
-            struct RClass* czmq_mod = mrb_module_get(mrb, "CZMQ");
-            struct RClass* zmsg_cl = mrb_class_get_under(mrb, czmq_mod, "Zmsg");
-            mrb_value czmq_zmsg = mrb_obj_value(zmsg_cl);
-            mrb_value zmsg_value = mrb_cptr_value(mrb, zmsg);
-
-            result = mrb_funcall(mrb, czmq_zmsg, "new_from", 2, zmsg_value, mrb_true_value());
+            result = mrb_ary_new_capa(mrb, zmsg_size(zmsg));
+            int ai = mrb_gc_arena_save(mrb);
+            zframe = zmsg_pop(zmsg);
+            while (zframe) {
+                mrb_value s = mrb_str_new(mrb, zframe_data(zframe), zframe_size(zframe));
+                zframe_destroy(&zframe);
+                mrb_ary_push(mrb, result, s);
+                mrb_gc_arena_restore(mrb, ai);
+                zframe = zmsg_pop(zmsg);
+            }
+            zmsg_destroy(&zmsg);
             mrb->jmp = prev_jmp;
         }
         MRB_CATCH(&c_jmp)
         {
             mrb->jmp = prev_jmp;
+            zframe_destroy(&zframe);
             zmsg_destroy(&zmsg);
             MRB_THROW(mrb->jmp);
         }
