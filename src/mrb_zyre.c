@@ -247,47 +247,21 @@ static mrb_value
 mrb_zyre_whisper(mrb_state* mrb, mrb_value self)
 {
     char* peer;
-    mrb_value* argv;
-    mrb_int argc;
+    char* msg_str;
+    mrb_int msg_len;
     zmsg_t* msg;
-    mrb_value* argv_end;
-    mrb_value s;
 
-    mrb_get_args(mrb, "z*", &peer, &argv, &argc);
-
-    if (argc < 1)
-        mrb_raise(mrb, E_ARGUMENT_ERROR, "wrong number of Arguments");
+    mrb_get_args(mrb, "zs", &peer, &msg_str, &msg_len);
 
     errno = 0;
 
     msg = zmsg_new();
     if (msg) {
-        argv_end = argv + argc;
-        struct mrb_jmpbuf* prev_jmp = mrb->jmp;
-        struct mrb_jmpbuf c_jmp;
-
-        MRB_TRY(&c_jmp)
-        {
-            mrb->jmp = &c_jmp;
-            int ai = mrb_gc_arena_save(mrb);
-            for (; argv < argv_end; argv++) {
-                s = mrb_str_to_str(mrb, *argv);
-                mrb_gc_arena_restore(mrb, ai);
-                if (zmsg_addmem(msg, RSTRING_PTR(s), (size_t)RSTRING_LEN(s)) == -1) {
-                    zmsg_destroy(&msg);
-                    mrb_sys_fail(mrb, "zmsg_addmem");
-                }
-            }
-            zyre_whisper((zyre_t*)DATA_PTR(self), peer, &msg);
-            mrb->jmp = prev_jmp;
-        }
-        MRB_CATCH(&c_jmp)
-        {
-            mrb->jmp = prev_jmp;
+        if (zmsg_addmem(msg, msg_str, msg_len) == -1) {
             zmsg_destroy(&msg);
-            MRB_THROW(mrb->jmp);
+            mrb_sys_fail(mrb, "zmsg_addmem");
         }
-        MRB_END_EXC(&c_jmp);
+        zyre_whisper((zyre_t*)DATA_PTR(self), peer, &msg);
     }
     else
         mrb_sys_fail(mrb, "zmsg_new");
@@ -299,47 +273,22 @@ static mrb_value
 mrb_zyre_shout(mrb_state* mrb, mrb_value self)
 {
     char* group;
-    mrb_value* argv;
-    mrb_int argc;
+    char* msg_str;
+    mrb_int msg_len;
     zmsg_t* msg;
-    mrb_value* argv_end;
-    mrb_value s;
 
-    mrb_get_args(mrb, "z*", &group, &argv, &argc);
-
-    if (argc < 1)
-        mrb_raise(mrb, E_ARGUMENT_ERROR, "wrong number of Arguments");
+    mrb_get_args(mrb, "zs", &group, &msg_str, &msg_len);
 
     errno = 0;
 
     msg = zmsg_new();
     if (msg) {
-        argv_end = argv + argc;
-        struct mrb_jmpbuf* prev_jmp = mrb->jmp;
-        struct mrb_jmpbuf c_jmp;
-
-        MRB_TRY(&c_jmp)
-        {
-            mrb->jmp = &c_jmp;
-            int ai = mrb_gc_arena_save(mrb);
-            for (; argv < argv_end; argv++) {
-                s = mrb_str_to_str(mrb, *argv);
-                mrb_gc_arena_restore(mrb, ai);
-                if (zmsg_addmem(msg, RSTRING_PTR(s), (size_t)RSTRING_LEN(s)) == -1) {
-                    zmsg_destroy(&msg);
-                    mrb_sys_fail(mrb, "zmsg_addmem");
-                }
-            }
-            zyre_shout((zyre_t*)DATA_PTR(self), group, &msg);
-            mrb->jmp = prev_jmp;
-        }
-        MRB_CATCH(&c_jmp)
-        {
-            mrb->jmp = prev_jmp;
+        if (zmsg_addmem(msg, msg_str, msg_len) == -1) {
             zmsg_destroy(&msg);
-            MRB_THROW(mrb->jmp);
+            mrb_sys_fail(mrb, "zmsg_addmem");
         }
-        MRB_END_EXC(&c_jmp);
+        zyre_shout((zyre_t*)DATA_PTR(self), group, &msg);
+        mrb->jmp = prev_jmp;
     }
     else
         mrb_sys_fail(mrb, "zmsg_new");
