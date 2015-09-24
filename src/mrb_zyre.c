@@ -288,7 +288,6 @@ mrb_zyre_shout(mrb_state* mrb, mrb_value self)
             mrb_sys_fail(mrb, "zmsg_addmem");
         }
         zyre_shout((zyre_t*)DATA_PTR(self), group, &msg);
-        mrb->jmp = prev_jmp;
     }
     else
         mrb_sys_fail(mrb, "zmsg_new");
