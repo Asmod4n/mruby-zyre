@@ -25,11 +25,11 @@ static const struct mrb_data_type mrb_zyre_type = {
 static mrb_value
 mrb_zyre_initialize(mrb_state* mrb, mrb_value self)
 {
-    errno = 0;
     char* name = NULL;
 
     mrb_get_args(mrb, "|z!", &name);
 
+    errno = 0;
     zyre_t* zyre = zyre_new(name);
     if (zyre)
         mrb_data_init(self, zyre, &mrb_zyre_type);
@@ -122,11 +122,11 @@ mrb_zyre_set_interface(mrb_state* mrb, mrb_value self)
 static mrb_value
 mrb_zyre_set_endpoint(mrb_state* mrb, mrb_value self)
 {
-    errno = 0;
     char* endpoint;
 
     mrb_get_args(mrb, "z", &endpoint);
 
+    errno = 0;
     if (zyre_set_endpoint((zyre_t*)DATA_PTR(self), "%s", endpoint) == -1)
         mrb_sys_fail(mrb, "zyre_set_endpoint");
 
@@ -161,7 +161,6 @@ static mrb_value
 mrb_zyre_start(mrb_state* mrb, mrb_value self)
 {
     errno = 0;
-
     if (zyre_start((zyre_t*)DATA_PTR(self)) == -1)
         mrb_sys_fail(mrb, "zyre_start");
 
@@ -203,10 +202,10 @@ mrb_zyre_leave(mrb_state* mrb, mrb_value self)
 static mrb_value
 mrb_zyre_recv(mrb_state* mrb, mrb_value self)
 {
-    errno = 0;
     mrb_value result = mrb_nil_value();
     zframe_t* zframe = NULL;
 
+    errno = 0;
     zmsg_t* zmsg = zyre_recv((zyre_t*)DATA_PTR(self));
     if (zmsg) {
         struct mrb_jmpbuf* prev_jmp = mrb->jmp;
@@ -254,7 +253,6 @@ mrb_zyre_whisper(mrb_state* mrb, mrb_value self)
     mrb_get_args(mrb, "zs", &peer, &msg_str, &msg_len);
 
     errno = 0;
-
     msg = zmsg_new();
     if (msg) {
         if (zmsg_addmem(msg, msg_str, msg_len) == -1) {
@@ -262,6 +260,7 @@ mrb_zyre_whisper(mrb_state* mrb, mrb_value self)
             mrb_sys_fail(mrb, "zmsg_addmem");
         }
         zyre_whisper((zyre_t*)DATA_PTR(self), peer, &msg);
+        zmsg_destroy(&msg);
     }
     else
         mrb_sys_fail(mrb, "zmsg_new");
@@ -280,7 +279,6 @@ mrb_zyre_shout(mrb_state* mrb, mrb_value self)
     mrb_get_args(mrb, "zs", &group, &msg_str, &msg_len);
 
     errno = 0;
-
     msg = zmsg_new();
     if (msg) {
         if (zmsg_addmem(msg, msg_str, msg_len) == -1) {
@@ -288,6 +286,7 @@ mrb_zyre_shout(mrb_state* mrb, mrb_value self)
             mrb_sys_fail(mrb, "zmsg_addmem");
         }
         zyre_shout((zyre_t*)DATA_PTR(self), group, &msg);
+        zmsg_destroy(&msg);
     }
     else
         mrb_sys_fail(mrb, "zmsg_new");
@@ -299,6 +298,8 @@ static mrb_value
 mrb_zyre_peers(mrb_state* mrb, mrb_value self)
 {
     zlist_t* peers = zyre_peers((zyre_t*)DATA_PTR(self));
+    if (!peers)
+        return mrb_nil_value();
 
     struct mrb_jmpbuf* prev_jmp = mrb->jmp;
     struct mrb_jmpbuf c_jmp;
@@ -307,8 +308,8 @@ mrb_zyre_peers(mrb_state* mrb, mrb_value self)
     MRB_TRY(&c_jmp)
     {
         mrb->jmp = &c_jmp;
-        int ai = mrb_gc_arena_save(mrb);
         result = mrb_ary_new_capa(mrb, zlist_size(peers));
+        int ai = mrb_gc_arena_save(mrb);
         char* peer = (char*)zlist_pop(peers);
         while (peer) {
             mrb_value s = mrb_str_new_cstr(mrb, peer);
@@ -336,6 +337,8 @@ static mrb_value
 mrb_zyre_own_groups(mrb_state* mrb, mrb_value self)
 {
     zlist_t* own_groups = zyre_own_groups((zyre_t*)DATA_PTR(self));
+    if (!own_groups)
+        return mrb_nil_value();
 
     struct mrb_jmpbuf* prev_jmp = mrb->jmp;
     struct mrb_jmpbuf c_jmp;
@@ -344,8 +347,8 @@ mrb_zyre_own_groups(mrb_state* mrb, mrb_value self)
     MRB_TRY(&c_jmp)
     {
         mrb->jmp = &c_jmp;
-        int ai = mrb_gc_arena_save(mrb);
         result = mrb_ary_new_capa(mrb, zlist_size(own_groups));
+        int ai = mrb_gc_arena_save(mrb);
         char* own_group = (char*)zlist_pop(own_groups);
         while (own_group) {
             mrb_value s = mrb_str_new_cstr(mrb, own_group);
@@ -373,6 +376,8 @@ static mrb_value
 mrb_zyre_peer_groups(mrb_state* mrb, mrb_value self)
 {
     zlist_t* peer_groups = zyre_peer_groups((zyre_t*)DATA_PTR(self));
+    if (!peer_groups)
+        return mrb_nil_value();
 
     struct mrb_jmpbuf* prev_jmp = mrb->jmp;
     struct mrb_jmpbuf c_jmp;
@@ -381,8 +386,8 @@ mrb_zyre_peer_groups(mrb_state* mrb, mrb_value self)
     MRB_TRY(&c_jmp)
     {
         mrb->jmp = &c_jmp;
-        int ai = mrb_gc_arena_save(mrb);
         result = mrb_ary_new_capa(mrb, zlist_size(peer_groups));
+        int ai = mrb_gc_arena_save(mrb);
         char* peer_group = (char*)zlist_pop(peer_groups);
         while (peer_group) {
             mrb_value s = mrb_str_new_cstr(mrb, peer_group);
@@ -409,11 +414,11 @@ mrb_zyre_peer_groups(mrb_state* mrb, mrb_value self)
 static mrb_value
 mrb_zyre_peer_address(mrb_state* mrb, mrb_value self)
 {
-    errno = 0;
     char* peer;
 
     mrb_get_args(mrb, "z", &peer);
 
+    errno = 0;
     char* address = zyre_peer_address((zyre_t*)DATA_PTR(self), peer);
     if (address) {
         mrb_value s = mrb_str_new_cstr(mrb, address);
@@ -429,11 +434,11 @@ mrb_zyre_peer_address(mrb_state* mrb, mrb_value self)
 static mrb_value
 mrb_zyre_peer_header_value(mrb_state* mrb, mrb_value self)
 {
-    errno = 0;
     char *peer, *name;
 
     mrb_get_args(mrb, "zz", &peer, &name);
 
+    errno = 0;
     char* value = zyre_peer_header_value((zyre_t*)DATA_PTR(self), peer, name);
     if (value) {
         mrb_value s = mrb_str_new_cstr(mrb, value);
@@ -454,10 +459,10 @@ mrb_zyre_socket(mrb_state* mrb, mrb_value self)
     zsock_t* zsock = zyre_socket((zyre_t*)DATA_PTR(self));
     struct RClass* czmq_mod = mrb_module_get(mrb, "CZMQ");
     struct RClass* zsock_cl = mrb_class_get_under(mrb, czmq_mod, "Zsock");
-    mrb_value czmq_zsock = mrb_obj_value(zsock_cl);
+    mrb_value czmq_zsock_value = mrb_obj_value(zsock_cl);
     mrb_value zsock_value = mrb_cptr_value(mrb, zsock);
 
-    return mrb_funcall(mrb, czmq_zsock, "new_from", 1, zsock_value);
+    return mrb_funcall(mrb, czmq_zsock_value, "new_from", 1, zsock_value);
 }
 
 void mrb_mruby_zyre_gem_init(mrb_state* mrb)
