@@ -202,7 +202,7 @@ mrb_zyre_leave(mrb_state* mrb, mrb_value self)
 static mrb_value
 mrb_zyre_recv(mrb_state* mrb, mrb_value self)
 {
-    mrb_value result = mrb_nil_value();
+    mrb_value result = self;
     zframe_t* zframe = NULL;
 
     errno = 0;
@@ -218,7 +218,7 @@ mrb_zyre_recv(mrb_state* mrb, mrb_value self)
             int ai = mrb_gc_arena_save(mrb);
             zframe = zmsg_pop(zmsg);
             while (zframe) {
-                mrb_value s = mrb_str_new(mrb, zframe_data(zframe), zframe_size(zframe));
+                mrb_value s = mrb_str_new(mrb, (const char*) zframe_data(zframe), zframe_size(zframe));
                 zframe_destroy(&zframe);
                 mrb_ary_push(mrb, result, s);
                 mrb_gc_arena_restore(mrb, ai);
@@ -303,7 +303,7 @@ mrb_zyre_peers(mrb_state* mrb, mrb_value self)
 
     struct mrb_jmpbuf* prev_jmp = mrb->jmp;
     struct mrb_jmpbuf c_jmp;
-    mrb_value result = mrb_nil_value();
+    mrb_value result = self;
 
     MRB_TRY(&c_jmp)
     {
@@ -342,7 +342,7 @@ mrb_zyre_own_groups(mrb_state* mrb, mrb_value self)
 
     struct mrb_jmpbuf* prev_jmp = mrb->jmp;
     struct mrb_jmpbuf c_jmp;
-    mrb_value result = mrb_nil_value();
+    mrb_value result = self;
 
     MRB_TRY(&c_jmp)
     {
@@ -381,7 +381,7 @@ mrb_zyre_peer_groups(mrb_state* mrb, mrb_value self)
 
     struct mrb_jmpbuf* prev_jmp = mrb->jmp;
     struct mrb_jmpbuf c_jmp;
-    mrb_value result = mrb_nil_value();
+    mrb_value result = self;
 
     MRB_TRY(&c_jmp)
     {
