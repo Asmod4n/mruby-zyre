@@ -59,7 +59,7 @@ mrb_zyre_uuid(mrb_state* mrb, mrb_value self)
 {
     const char* uuid = zyre_uuid((zyre_t*)DATA_PTR(self));
 
-    return mrb_str_new_static(mrb, uuid, strlen(uuid));
+    return mrb_str_new_cstr(mrb, uuid);
 }
 
 static mrb_value
