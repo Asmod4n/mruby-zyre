@@ -9,17 +9,13 @@
 #include <mruby/throw.h>
 
 static void
-mrb_zyre_destroy(mrb_state* mrb, void* p)
+mrb_zyre_free(mrb_state* mrb, void* p)
 {
-    if (p) {
-        zyre_stop((zyre_t*)p);
-        zclock_sleep(100);
-        zyre_destroy((zyre_t**)&p);
-    }
+    zyre_destroy((zyre_t**)&p);
 }
 
 static const struct mrb_data_type mrb_zyre_type = {
-    "$i_mrb_zyre_type", mrb_zyre_destroy
+    "$i_mrb_zyre_type", mrb_zyre_free
 };
 
 static mrb_value
@@ -37,6 +33,17 @@ mrb_zyre_initialize(mrb_state* mrb, mrb_value self)
         mrb_sys_fail(mrb, "zyre_new");
 
     return self;
+}
+
+static mrb_value
+mrb_zyre_destroy(mrb_state* mrb, mrb_value self)
+{
+    if (DATA_TYPE(self) != NULL) {
+        zyre_destroy((zyre_t**)&DATA_PTR(self));
+        DATA_TYPE(self) = NULL;
+    }
+
+    return mrb_nil_value();
 }
 
 static mrb_value
@@ -472,6 +479,7 @@ void mrb_mruby_zyre_gem_init(mrb_state* mrb)
     zyre_class = mrb_define_class(mrb, "Zyre", mrb->object_class);
     MRB_SET_INSTANCE_TT(zyre_class, MRB_TT_DATA);
     mrb_define_method(mrb, zyre_class, "initialize", mrb_zyre_initialize, MRB_ARGS_OPT(1));
+    mrb_define_method(mrb, zyre_class, "destroy", mrb_zyre_destroy, MRB_ARGS_NONE());
     mrb_define_method(mrb, zyre_class, "print", mrb_zyre_print, MRB_ARGS_NONE());
     mrb_define_method(mrb, zyre_class, "uuid", mrb_zyre_uuid, MRB_ARGS_NONE());
     mrb_define_method(mrb, zyre_class, "name", mrb_zyre_name, MRB_ARGS_NONE());
