@@ -72,7 +72,7 @@ mrb_zyre_name(mrb_state* mrb, mrb_value self)
 {
     const char* name = zyre_name((zyre_t*)DATA_PTR(self));
 
-    return mrb_str_new_static(mrb, name, strlen(name));
+    return mrb_str_new_cstr(mrb, name);
 }
 
 static mrb_value
