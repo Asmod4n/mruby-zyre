@@ -3,6 +3,5 @@ MRuby::Gem::Specification.new('mruby-zyre') do |spec|
   spec.author  = 'Hendrik Beskow'
   spec.summary = 'zyre bindings for mruby'
   spec.add_dependency 'mruby-errno'
-  spec.add_dependency 'mruby-czmq'
-  spec.linker.libraries << 'zyre'
+  spec.linker.libraries << 'zmq' << 'czmq' << 'zyre'
 end

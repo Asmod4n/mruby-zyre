@@ -11,11 +11,8 @@
 static void
 mrb_zyre_free(mrb_state* mrb, void* p)
 {
-    if (p) {
-        zyre_stop((zyre_t*)p);
-        zclock_sleep(100);
-        zyre_destroy((zyre_t**)&p);
-    }
+    zyre_stop((zyre_t*)p);
+    zyre_destroy((zyre_t**)&p);
 }
 
 static const struct mrb_data_type mrb_zyre_type = {
@@ -43,10 +40,8 @@ mrb_zyre_initialize(mrb_state* mrb, mrb_value self)
 static mrb_value
 mrb_zyre_destroy(mrb_state* mrb, mrb_value self)
 {
-    if (DATA_TYPE(self) != NULL) {
-        zyre_destroy((zyre_t**)&DATA_PTR(self));
-        DATA_TYPE(self) = NULL;
-    }
+    zyre_destroy((zyre_t**)&DATA_PTR(self));
+    DATA_TYPE(self) = NULL;
 
     return mrb_nil_value();
 }
@@ -62,17 +57,13 @@ mrb_zyre_print(mrb_state* mrb, mrb_value self)
 static mrb_value
 mrb_zyre_uuid(mrb_state* mrb, mrb_value self)
 {
-    const char* uuid = zyre_uuid((zyre_t*)DATA_PTR(self));
-
-    return mrb_str_new_cstr(mrb, uuid);
+    return mrb_str_new_cstr(mrb, zyre_uuid((zyre_t*)DATA_PTR(self)));
 }
 
 static mrb_value
 mrb_zyre_name(mrb_state* mrb, mrb_value self)
 {
-    const char* name = zyre_name((zyre_t*)DATA_PTR(self));
-
-    return mrb_str_new_cstr(mrb, name);
+    return mrb_str_new_cstr(mrb, zyre_name((zyre_t*)DATA_PTR(self)));
 }
 
 static mrb_value
@@ -244,8 +235,8 @@ mrb_zyre_recv(mrb_state* mrb, mrb_value self)
         MRB_CATCH(&c_jmp)
         {
             mrb->jmp = prev_jmp;
-            zframe_destroy(&zframe);
             zmsg_destroy(&zmsg);
+            zframe_destroy(&zframe);
             MRB_THROW(mrb->jmp);
         }
         MRB_END_EXC(&c_jmp);
@@ -310,6 +301,51 @@ static mrb_value
 mrb_zyre_peers(mrb_state* mrb, mrb_value self)
 {
     zlist_t* peers = zyre_peers((zyre_t*)DATA_PTR(self));
+    if (!peers) {
+        return mrb_nil_value();
+    }
+
+    struct mrb_jmpbuf* prev_jmp = mrb->jmp;
+    struct mrb_jmpbuf c_jmp;
+    mrb_value peers_ary = self;
+    char* peer = NULL;
+
+    MRB_TRY(&c_jmp)
+    {
+        mrb->jmp = &c_jmp;
+        peers_ary = mrb_ary_new_capa(mrb, zlist_size(peers));
+        int ai = mrb_gc_arena_save(mrb);
+        peer = (char*)zlist_pop(peers);
+        while (peer) {
+            mrb_value peer_str = mrb_str_new_cstr(mrb, peer);
+            zstr_free(&peer);
+            mrb_ary_push(mrb, peers_ary, peer_str);
+            mrb_gc_arena_restore(mrb, ai);
+            peer = (char*)zlist_pop(peers);
+        }
+
+        zlist_destroy(&peers);
+        mrb->jmp = prev_jmp;
+    }
+    MRB_CATCH(&c_jmp)
+    {
+        mrb->jmp = prev_jmp;
+        zlist_destroy(&peers);
+        zstr_free(&peer);
+        MRB_THROW(mrb->jmp);
+    }
+    MRB_END_EXC(&c_jmp);
+
+    return peers_ary;
+}
+
+static mrb_value
+mrb_zyre_peers_by_group(mrb_state *mrb, mrb_value self)
+{
+    char *name;
+    mrb_get_args(mrb, "z", &name);
+
+    zlist_t* peers = zyre_peers_by_group((zyre_t*)DATA_PTR(self), name);
     if (!peers) {
         return mrb_nil_value();
     }
@@ -507,20 +543,13 @@ mrb_zyre_peer_header_value(mrb_state* mrb, mrb_value self)
 static mrb_value
 mrb_zyre_socket(mrb_state* mrb, mrb_value self)
 {
-    zsock_t* zsock = zyre_socket((zyre_t*)DATA_PTR(self));
-    struct RClass* czmq_mod = mrb_module_get(mrb, "CZMQ");
-    struct RClass* zsock_cl = mrb_class_get_under(mrb, czmq_mod, "Zsock");
-    mrb_value czmq_zsock_value = mrb_obj_value(zsock_cl);
-    mrb_value zsock_value = mrb_cptr_value(mrb, zsock);
-
-    return mrb_funcall(mrb, czmq_zsock_value, "new_from", 1, zsock_value);
+    return mrb_cptr_value(mrb, zsock_resolve(zyre_socket((zyre_t *)DATA_PTR(self))));
 }
 
-void mrb_mruby_zyre_gem_init(mrb_state* mrb)
+void
+mrb_mruby_zyre_gem_init(mrb_state* mrb)
 {
-    struct RClass* zyre_class;
-
-    zyre_class = mrb_define_class(mrb, "Zyre", mrb->object_class);
+    struct RClass* zyre_class = mrb_define_class(mrb, "Zyre", mrb->object_class);
     MRB_SET_INSTANCE_TT(zyre_class, MRB_TT_DATA);
     mrb_define_method(mrb, zyre_class, "initialize", mrb_zyre_initialize, MRB_ARGS_OPT(1));
     mrb_define_method(mrb, zyre_class, "destroy", mrb_zyre_destroy, MRB_ARGS_NONE());
@@ -543,6 +572,7 @@ void mrb_mruby_zyre_gem_init(mrb_state* mrb)
     mrb_define_method(mrb, zyre_class, "whisper", mrb_zyre_whisper, MRB_ARGS_REQ(1) | MRB_ARGS_REST());
     mrb_define_method(mrb, zyre_class, "shout", mrb_zyre_shout, MRB_ARGS_REQ(1) | MRB_ARGS_REST());
     mrb_define_method(mrb, zyre_class, "peers", mrb_zyre_peers, MRB_ARGS_NONE());
+    mrb_define_method(mrb, zyre_class, "peers_by_group", mrb_zyre_peers_by_group, MRB_ARGS_REQ(1));
     mrb_define_method(mrb, zyre_class, "own_groups", mrb_zyre_own_groups, MRB_ARGS_NONE());
     mrb_define_method(mrb, zyre_class, "peer_groups", mrb_zyre_peer_groups, MRB_ARGS_REQ(1));
     mrb_define_method(mrb, zyre_class, "peer_address", mrb_zyre_peer_address, MRB_ARGS_REQ(1));
@@ -550,6 +580,4 @@ void mrb_mruby_zyre_gem_init(mrb_state* mrb)
     mrb_define_method(mrb, zyre_class, "socket", mrb_zyre_socket, MRB_ARGS_NONE());
 }
 
-void mrb_mruby_zyre_gem_final(mrb_state* mrb)
-{
-}
+void mrb_mruby_zyre_gem_final(mrb_state* mrb) {}
