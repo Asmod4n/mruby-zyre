@@ -578,6 +578,7 @@ mrb_mruby_zyre_gem_init(mrb_state* mrb)
     mrb_define_method(mrb, zyre_class, "peer_address", mrb_zyre_peer_address, MRB_ARGS_REQ(1));
     mrb_define_method(mrb, zyre_class, "peer_header_value", mrb_zyre_peer_header_value, MRB_ARGS_REQ(2));
     mrb_define_method(mrb, zyre_class, "socket", mrb_zyre_socket, MRB_ARGS_NONE());
+    mrb_define_alias(mrb, zyre_class, "zmq_socket", "socket");
 }
 
 void mrb_mruby_zyre_gem_final(mrb_state* mrb) {}
